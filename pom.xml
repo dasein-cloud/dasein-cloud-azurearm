@@ -46,7 +46,14 @@
         <dependency>
             <groupId>org.dasein</groupId>
             <artifactId>dasein-cloud-core</artifactId>
-            <version>2015.09.1-SNAPSHOT</version>
+            <version>2015.10.2-SNAPSHOT</version>
+            <scope>compile</scope>
+            <optional>false</optional>
+        </dependency>
+        <dependency>
+            <groupId>dasein-cloud</groupId>
+            <artifactId>dasein-cloud-utils</artifactId>
+            <version>1.0.0.1-SNAPSHOT</version>
             <scope>compile</scope>
             <optional>false</optional>
         </dependency>
@@ -60,7 +67,7 @@
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpclient</artifactId>
-            <version>4.3.2</version>
+            <version>4.5.1</version>
         </dependency>
         <dependency>
             <groupId>org.bouncycastle</groupId>
@@ -90,6 +97,12 @@
             <artifactId>joda-time</artifactId>
             <version>2.3</version>
         </dependency>
+        <dependency>
+            <groupId>com.microsoft.aad</groupId>
+            <artifactId>adal4j</artifactId>
+            <version>0.0.2</version>
+        </dependency>
+
         <!-- Provided -->
         <dependency>
             <groupId>javax.servlet</groupId>
@@ -213,36 +226,24 @@
                             <value>${endpoint}</value>
                         </property>
                         <property>
-                            <name>userName</name>
-                            <value>${user.name}</value>
-                        </property>
-                        <property>
                             <name>accountNumber</name>
                             <value>${accountNumber}</value>
                         </property>
                         <property>
-                            <name>accessPublic</name>
-                            <value>${apiSharedKey}</value>
+                            <name>username</name>
+                            <value>${username}</value>
                         </property>
                         <property>
-                            <name>accessPrivate</name>
-                            <value>${apiSecretKey}</value>
+                            <name>password</name>
+                            <value>${password}</value>
                         </property>
                         <property>
-                            <name>apiSharedKey</name>
-                            <value>${apiSharedKey}</value>
+                            <name>adTenantId</name>
+                            <value>${adTenantId}</value>
                         </property>
                         <property>
-                            <name>apiSecretKey</name>
-                            <value>${apiSecretKey}</value>
-                        </property>
-                        <property>
-                            <name>apiKeyShared</name>
-                            <value>${x509CertFile}</value>
-                        </property>
-                        <property>
-                            <name>apiKeySecret</name>
-                            <value>${x509KeyFile}</value>
+                            <name>applicationId</name>
+                            <value>${applicationId}</value>
                         </property>
                         <property>
                             <name>cloudName</name>
@@ -289,9 +290,10 @@
                             <value>${proxyPort}</value>
                         </property>
                     </systemProperties>
-                    <excludes>
-                        <exclude>**/TestSuite.java</exclude>
-                    </excludes>
+                    <includes>
+                        <include>**/TestSuite.java</include>
+                        <!--<include>**/tests/AzureArmVirtualMachineSupportTests.java</include>-->
+                    </includes>
                 </configuration>
             </plugin>
             <plugin>

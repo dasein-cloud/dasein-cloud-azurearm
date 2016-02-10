@@ -46,7 +46,14 @@
         <dependency>
             <groupId>org.dasein</groupId>
             <artifactId>dasein-cloud-core</artifactId>
-            <version>2015.06.1</version>
+            <version>2015.10.2-SNAPSHOT</version>
+            <scope>compile</scope>
+            <optional>false</optional>
+        </dependency>
+        <dependency>
+            <groupId>dasein-cloud</groupId>
+            <artifactId>dasein-cloud-utils</artifactId>
+            <version>1.0.0.1-SNAPSHOT</version>
             <scope>compile</scope>
             <optional>false</optional>
         </dependency>
@@ -60,7 +67,7 @@
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpclient</artifactId>
-            <version>4.3.2</version>
+            <version>4.5.1</version>
         </dependency>
         <dependency>
             <groupId>org.bouncycastle</groupId>
@@ -235,6 +242,10 @@
                             <value>${adTenantId}</value>
                         </property>
                         <property>
+                            <name>applicationId</name>
+                            <value>${applicationId}</value>
+                        </property>
+                        <property>
                             <name>cloudName</name>
                             <value>${cloudName}</value>
                         </property>
@@ -281,6 +292,7 @@
                     </systemProperties>
                     <includes>
                         <include>**/TestSuite.java</include>
+                        <!--<include>**/tests/AzureArmVirtualMachineSupportTests.java</include>-->
                     </includes>
                 </configuration>
             </plugin>

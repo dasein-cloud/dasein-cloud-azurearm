@@ -21,15 +21,17 @@ package org.dasein.cloud.azurearm;
 import org.apache.http.conn.HttpClientConnectionManager;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.conn.BasicHttpClientConnectionManager;
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.dasein.cloud.AbstractCloud;
 import org.dasein.cloud.CloudException;
 import org.dasein.cloud.ContextRequirements;
-import org.dasein.cloud.ProviderContext;
+import org.dasein.cloud.azurearm.compute.AzureArmComputeService;
+import org.dasein.cloud.azurearm.network.AzureArmNetworkServices;
 import org.dasein.cloud.dc.DataCenterServices;
+import org.dasein.cloud.network.NetworkServices;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -56,6 +58,20 @@ public class AzureArm extends AbstractCloud {
         }
     }
 
+    public HttpClientBuilder getAzureClientBuilderWithPooling() throws CloudException {
+        try {
+
+            HttpClientBuilder builder = HttpClientBuilder.create();
+            PoolingHttpClientConnectionManager connManager = new PoolingHttpClientConnectionManager();
+            connManager.setMaxTotal(200);
+            connManager.setDefaultMaxPerRoute(20);
+            builder.setConnectionManager(connManager);
+            return builder;
+        } catch (Exception e) {
+            throw new CloudException(e.getMessage());
+        }
+    }
+
     @Override
     public @Nonnull String getCloudName() {
         return "Azure";
@@ -66,16 +82,23 @@ public class AzureArm extends AbstractCloud {
         return new ContextRequirements(
                 new ContextRequirements.Field("username", "Active Directory Username", ContextRequirements.FieldType.TEXT, true),
                 new ContextRequirements.Field("password", "Active Directory Password", ContextRequirements.FieldType.TEXT, true),
-                new ContextRequirements.Field("adTenantId", "Active Directory Client Application Id", ContextRequirements.FieldType.TEXT, true),
+                new ContextRequirements.Field("adTenantId", "Active Directory Client Application Authentication Endpoint Id", ContextRequirements.FieldType.TEXT, true),
+                new ContextRequirements.Field("applicationId", "Active Directory Client Application Id", ContextRequirements.FieldType.TEXT, true),
                 new ContextRequirements.Field("proxyHost", "Proxy host", ContextRequirements.FieldType.TEXT, false),
                 new ContextRequirements.Field("proxyPort", "Proxy port", ContextRequirements.FieldType.TEXT, false)
         );
     }
 
     @Override
+    public @Nonnull AzureArmComputeService getComputeServices() { return new AzureArmComputeService(this); }
+
+    @Override
     public @Nonnull DataCenterServices getDataCenterServices() {
         return new AzureArmLocation(this);
     }
+
+    @Override
+    public @Nullable NetworkServices getNetworkServices() { return new AzureArmNetworkServices(this);  }
 
     @Override
     public @Nonnull String getProviderName() {

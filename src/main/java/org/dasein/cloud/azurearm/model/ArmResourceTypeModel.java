@@ -1,5 +1,6 @@
-package org.dasein.cloud.azurearm.model.resource;
+package org.dasein.cloud.azurearm.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.ArrayList;
@@ -11,7 +12,8 @@ import java.util.List;
  * @since 2015.06.1
  * @version 2015.06.1
  */
-public class AzureArmResourceTypeModel {
+@JsonIgnoreProperties(ignoreUnknown = true)
+public class ArmResourceTypeModel {
     @JsonProperty("resourceType")
     private String resourceType;
     @JsonProperty("locations")

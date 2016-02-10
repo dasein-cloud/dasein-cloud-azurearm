@@ -16,10 +16,10 @@
  * ====================================================================
  */
 
-package org.dasein.cloud.azurearm.model.geography;
+package org.dasein.cloud.azurearm.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.dasein.cloud.azurearm.model.resource.AzureArmResourceTypeModel;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,13 +30,14 @@ import java.util.List;
  * @since 2015.06.1
  * @version 2015.06.1
  */
-public class AzureArmLocationModel {
+@JsonIgnoreProperties(ignoreUnknown = true)
+public class ArmProviderModel {
     @JsonProperty("id")
     private String id;
     @JsonProperty("namespace")
     private String namespace;
-    @JsonProperty("azureArmResourceTypes")
-    List<AzureArmResourceTypeModel> azureArmResourceTypes = new ArrayList<AzureArmResourceTypeModel>();
+    @JsonProperty("resourceTypes")
+    private List<ArmResourceTypeModel> azureArmResourceTypes = new ArrayList<ArmResourceTypeModel>();
     @JsonProperty("registrationState")
     private String registrationState;
 
@@ -56,11 +57,11 @@ public class AzureArmLocationModel {
         return this.namespace;
     }
 
-    public void setAzureArmResourceTypes(ArrayList<AzureArmResourceTypeModel> azureArmResourceTypes){
+    public void setAzureArmResourceTypes(ArrayList<ArmResourceTypeModel> azureArmResourceTypes){
         this.azureArmResourceTypes = azureArmResourceTypes;
     }
 
-    public List<AzureArmResourceTypeModel> getAzureArmResourceTypes(){
+    public List<ArmResourceTypeModel> getAzureArmResourceTypes(){
         return this.azureArmResourceTypes;
     }
 

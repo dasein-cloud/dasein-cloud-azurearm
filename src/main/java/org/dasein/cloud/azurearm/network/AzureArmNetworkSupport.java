@@ -9,12 +9,17 @@ import org.dasein.cloud.azurearm.network.model.ArmNetworksModel;
 import org.dasein.cloud.azurearm.network.model.ArmSubnetModel;
 import org.dasein.cloud.azurearm.network.model.ArmSubnetsModel;
 import org.dasein.cloud.dc.ResourcePool;
-import org.dasein.cloud.network.*;
+import org.dasein.cloud.network.AbstractVLANSupport;
+import org.dasein.cloud.network.Subnet;
+import org.dasein.cloud.network.SubnetCreateOptions;
+import org.dasein.cloud.network.SubnetState;
+import org.dasein.cloud.network.VLAN;
+import org.dasein.cloud.network.VLANCapabilities;
+import org.dasein.cloud.network.VlanCreateOptions;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Locale;
 
 /**
  * Created by vmunthiu on 1/21/2016.
@@ -157,24 +162,6 @@ public class AzureArmNetworkSupport extends AbstractVLANSupport<AzureArm> {
     @Override
     public VLANCapabilities getCapabilities() throws CloudException, InternalException {
         return new AzureArmNetworkCapabilities(this.getProvider());
-    }
-
-    @Nonnull
-    @Override
-    public String getProviderTermForNetworkInterface(@Nonnull Locale locale) {
-        return "Network Interface";
-    }
-
-    @Nonnull
-    @Override
-    public String getProviderTermForSubnet(@Nonnull Locale locale) {
-        return "Subnet";
-    }
-
-    @Nonnull
-    @Override
-    public String getProviderTermForVlan(@Nonnull Locale locale) {
-        return "Virtual Networks";
     }
 
     @Override

@@ -7,6 +7,7 @@ import org.apache.http.client.methods.RequestBuilder;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.dasein.cloud.CloudException;
 import org.dasein.cloud.CloudProvider;
+import org.dasein.cloud.GeneralCloudException;
 import org.dasein.cloud.util.requester.fluent.DaseinRequest;
 
 import java.util.concurrent.ExecutorService;
@@ -58,7 +59,7 @@ public class AzureArmRequester extends DaseinRequest {
             AuthenticationResult result = future.get();
             return result.getAccessToken();
         } catch(Exception ex){
-            throw new CloudException("Could not obtain authentication token. " + ex.getMessage());
+            throw new GeneralCloudException("Could not obtain authentication token. " + ex.getMessage());
         }
         finally {
             service.shutdown();

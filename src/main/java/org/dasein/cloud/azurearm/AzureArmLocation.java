@@ -28,7 +28,14 @@ import org.dasein.cloud.azurearm.model.ArmProviderModel;
 import org.dasein.cloud.azurearm.model.ArmResourceGroupModel;
 import org.dasein.cloud.azurearm.model.ArmResourceGroupsModel;
 import org.dasein.cloud.azurearm.model.ArmResourceTypeModel;
-import org.dasein.cloud.dc.*;
+import org.dasein.cloud.dc.AbstractDataCenterServices;
+import org.dasein.cloud.dc.DataCenter;
+import org.dasein.cloud.dc.DataCenterCapabilities;
+import org.dasein.cloud.dc.Folder;
+import org.dasein.cloud.dc.Jurisdiction;
+import org.dasein.cloud.dc.Region;
+import org.dasein.cloud.dc.ResourcePool;
+import org.dasein.cloud.dc.StoragePool;
 import org.dasein.cloud.util.requester.DriverToCoreMapper;
 import org.dasein.cloud.util.requester.entities.DaseinObjectToJsonEntity;
 
@@ -37,7 +44,6 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
 
 /**
  * Displays the available locations for Microsoft Azure services.
@@ -45,29 +51,18 @@ import java.util.Locale;
  * @since 2015.06.1
  * @version 2015.06.1
  */
-public class AzureArmLocation implements DataCenterServices{
-    private AzureArm provider;
+public class AzureArmLocation extends AbstractDataCenterServices<AzureArm>{
 
-    AzureArmLocation(AzureArm provider) { this.provider = provider; }
+    protected AzureArmLocation(AzureArm provider) { super(provider); }
 
     private transient volatile AzureArmLocationCapabilities capabilities;
     @Nonnull
     @Override
     public DataCenterCapabilities getCapabilities() throws InternalException, CloudException {
         if( capabilities == null ) {
-            capabilities = new AzureArmLocationCapabilities(provider);
+            capabilities = new AzureArmLocationCapabilities(getProvider());
         }
         return capabilities;
-    }
-
-    @Override
-    public String getProviderTermForDataCenter(Locale locale) {
-        return "datacenter";
-    }
-
-    @Override
-    public String getProviderTermForRegion(Locale locale) {
-        return "location";
     }
 
     @Override
@@ -75,7 +70,7 @@ public class AzureArmLocation implements DataCenterServices{
         for(Region region : listRegions()){
             if(providerRegionId.equals(region.getProviderRegionId()))return region;
         }
-        throw new InternalException("The requested region does not exist or cannot be found");
+        return null;
     }
 
     @Nonnull
@@ -83,8 +78,10 @@ public class AzureArmLocation implements DataCenterServices{
     public Iterable<DataCenter> listDataCenters(@Nonnull String providerRegionId) throws InternalException, CloudException {
         List<DataCenter> dataCenters = new ArrayList<DataCenter>();
         for(Region region : listRegions()){
-            DataCenter dc = new DataCenter(region.getProviderRegionId() + "-dc", region.getProviderRegionId() + "-dc", region.getProviderRegionId(), true, true);
-            dataCenters.add(dc);
+            if (region.getProviderRegionId().equals(providerRegionId)) {
+                DataCenter dc = new DataCenter(region.getProviderRegionId() + "-dc", region.getProviderRegionId() + "-dc", region.getProviderRegionId(), true, true);
+                dataCenters.add(dc);
+            }
         }
         return dataCenters;
     }
@@ -96,12 +93,12 @@ public class AzureArmLocation implements DataCenterServices{
                 if(dc.getProviderDataCenterId().equals(providerDataCenterId))return dc;
             }
         }
-        throw new InternalException("The requested datacenter does not exist or cannot be found");
+        return null;
     }
 
     @Override
     public @Nonnull Iterable<Region> listRegions() throws InternalException, CloudException {
-        ArmProviderModel result = RequestsDsl.createGetRequest(provider).forLocations().withJsonProcessor(ArmProviderModel.class).execute();
+        ArmProviderModel result = RequestsDsl.createGetRequest(getProvider()).forLocations().withJsonProcessor(ArmProviderModel.class).execute();
 
         ArmResourceTypeModel azureArmResourceTypeModel = (ArmResourceTypeModel)CollectionUtils.find(result.getAzureArmResourceTypes(), new Predicate() {
             @Override
@@ -144,10 +141,10 @@ public class AzureArmLocation implements DataCenterServices{
     @Override
     public @Nonnull Iterable<ResourcePool> listResourcePools(@Nonnull String providerDataCenterId) throws InternalException, CloudException {
         RequestBuilder requestBuilder = RequestBuilder.get();
-        addCommonHeaders(requestBuilder, AzureArmRequester.getAuthenticationToken(this.provider));
-        requestBuilder.setUri(String.format("https://management.azure.com/Subscriptions/%s/resourceGroups?api-version=2014-04-01", this.provider.getContext().getAccountNumber()));
+        addCommonHeaders(requestBuilder, AzureArmRequester.getAuthenticationToken(getProvider()));
+        requestBuilder.setUri(String.format("https://management.azure.com/Subscriptions/%s/resourceGroups?api-version=2014-04-01", getProvider().getContext().getAccountNumber()));
 
-        ArmResourceGroupsModel armResourceGroupsModel = new AzureArmRequester(this.provider, this.provider.getAzureClientBuilderWithPooling(), requestBuilder.build()).withJsonProcessor(ArmResourceGroupsModel.class).execute();
+        ArmResourceGroupsModel armResourceGroupsModel = new AzureArmRequester(getProvider(), getProvider().getAzureClientBuilderWithPooling(), requestBuilder.build()).withJsonProcessor(ArmResourceGroupsModel.class).execute();
         final ArrayList<ResourcePool> resourcePools = new ArrayList<ResourcePool>();
 
         CollectionUtils.forAllDo(armResourceGroupsModel.getArmResourceGroupModels(), new Closure() {
@@ -163,10 +160,10 @@ public class AzureArmLocation implements DataCenterServices{
     @Override
     public @Nullable ResourcePool getResourcePool(@Nonnull String providerResourcePoolId) throws InternalException, CloudException {
         RequestBuilder requestBuilder = RequestBuilder.get();
-        addCommonHeaders(requestBuilder, AzureArmRequester.getAuthenticationToken(this.provider));
-        requestBuilder.setUri(String.format("%s/%s?api-version=2014-04-01", this.provider.getContext().getCloud().getEndpoint(), providerResourcePoolId));
+        addCommonHeaders(requestBuilder, AzureArmRequester.getAuthenticationToken(getProvider()));
+        requestBuilder.setUri(String.format("%s/%s?api-version=2014-04-01", getProvider().getContext().getCloud().getEndpoint(), providerResourcePoolId));
 
-        return new AzureArmRequester(this.provider, this.provider.getAzureClientBuilderWithPooling(), requestBuilder.build()).withJsonProcessor(new DriverToCoreMapper<ArmResourceGroupModel, ResourcePool>() {
+        return new AzureArmRequester(getProvider(), getProvider().getAzureClientBuilderWithPooling(), requestBuilder.build()).withJsonProcessor(new DriverToCoreMapper<ArmResourceGroupModel, ResourcePool>() {
             @Override
             public ResourcePool mapFrom(ArmResourceGroupModel entity) {
                 return getResourcePoolFrom(entity);
@@ -176,13 +173,13 @@ public class AzureArmLocation implements DataCenterServices{
 
     public @Nonnull ResourcePool createResourcePool(String name) throws InternalException, CloudException {
         RequestBuilder requestBuilder = RequestBuilder.put();
-        addCommonHeaders(requestBuilder, AzureArmRequester.getAuthenticationToken(this.provider));
-        requestBuilder.setUri(String.format("%s/subscriptions/%s/resourcegroups/%s?api-version=2014-04-01", this.provider.getContext().getCloud().getEndpoint(), this.provider.getContext().getAccountNumber(), name));
+        addCommonHeaders(requestBuilder, AzureArmRequester.getAuthenticationToken(getProvider()));
+        requestBuilder.setUri(String.format("%s/subscriptions/%s/resourcegroups/%s?api-version=2014-04-01", getProvider().getContext().getCloud().getEndpoint(), getProvider().getContext().getAccountNumber(), name));
         ArmResourceGroupModel armResourceGroupModel = new ArmResourceGroupModel();
-        armResourceGroupModel.setLocation(this.provider.getContext().getRegionId());
+        armResourceGroupModel.setLocation(getProvider().getContext().getRegionId());
         requestBuilder.setEntity(new DaseinObjectToJsonEntity<ArmResourceGroupModel>(armResourceGroupModel));
 
-        return new AzureArmRequester(this.provider, this.provider.getAzureClientBuilderWithPooling(), requestBuilder.build()).withJsonProcessor(new DriverToCoreMapper<ArmResourceGroupModel, ResourcePool>() {
+        return new AzureArmRequester(getProvider(), getProvider().getAzureClientBuilderWithPooling(), requestBuilder.build()).withJsonProcessor(new DriverToCoreMapper<ArmResourceGroupModel, ResourcePool>() {
             @Override
             public ResourcePool mapFrom(ArmResourceGroupModel entity) {
                 return getResourcePoolFrom(entity);
@@ -192,10 +189,10 @@ public class AzureArmLocation implements DataCenterServices{
 
     public void deleteResourcePool(@Nonnull String providerResourcePoolId )throws InternalException, CloudException {
         RequestBuilder requestBuilder = RequestBuilder.delete();
-        addCommonHeaders(requestBuilder, AzureArmRequester.getAuthenticationToken(this.provider));
-        requestBuilder.setUri(String.format("%s/%s?api-version=2014-04-01", this.provider.getContext().getCloud().getEndpoint(), providerResourcePoolId));
+        addCommonHeaders(requestBuilder, AzureArmRequester.getAuthenticationToken(getProvider()));
+        requestBuilder.setUri(String.format("%s/%s?api-version=2014-04-01", getProvider().getContext().getCloud().getEndpoint(), providerResourcePoolId));
 
-        new AzureArmRequester(this.provider, this.provider.getAzureClientBuilderWithPooling(), requestBuilder.build()).execute();
+        new AzureArmRequester(getProvider(), getProvider().getAzureClientBuilderWithPooling(), requestBuilder.build()).execute();
     }
 
     private ResourcePool getResourcePoolFrom(ArmResourceGroupModel input) {

@@ -30,6 +30,8 @@ import org.dasein.cloud.azurearm.AzureArmRequester;
 import org.dasein.cloud.azurearm.ci.model.ArmConvergedInfrastructureRequestModel;
 import org.dasein.cloud.azurearm.ci.model.ArmConvergedInfrastructureResponseModel;
 import org.dasein.cloud.azurearm.ci.model.ArmConvergedInfrastructuresResponseModel;
+import org.dasein.cloud.azurearm.ci.model.ArmTemplateDeploymentOperationResponseModel;
+import org.dasein.cloud.azurearm.ci.model.ArmTemplateDeploymentOperationsResponseModel;
 import org.dasein.cloud.ci.AbstractConvergedInfrastructureSupport;
 import org.dasein.cloud.ci.ConvergedInfrastructure;
 import org.dasein.cloud.ci.ConvergedInfrastructureCapabilities;
@@ -220,7 +222,7 @@ public class AzureArmConvergedInfrastructureSupport extends AbstractConvergedInf
         return convergedInfrastructureFrom(armConvergedInfrastructureModelResult);
     }
 
-    private ConvergedInfrastructure convergedInfrastructureFrom(ArmConvergedInfrastructureResponseModel armConvergedInfrastructureModel) throws InternalException{
+    private ConvergedInfrastructure convergedInfrastructureFrom(ArmConvergedInfrastructureResponseModel armConvergedInfrastructureModel) throws CloudException, InternalException{
         String id = armConvergedInfrastructureModel.getId();
         String name = armConvergedInfrastructureModel.getName();
         String regionId = armConvergedInfrastructureModel.getProviderRegionId();
@@ -233,9 +235,10 @@ public class AzureArmConvergedInfrastructureSupport extends AbstractConvergedInf
         List<ConvergedInfrastructureResource> list = new ArrayList<ConvergedInfrastructureResource>();
 
         if (armConvergedInfrastructureModel.getProperties() != null) {
-            tags = armConvergedInfrastructureModel.getProperties().getTags();
-            if (armConvergedInfrastructureModel.getProperties().getCiState() != null) {
-                String ciState = armConvergedInfrastructureModel.getProperties().getCiState();
+            ArmConvergedInfrastructureResponseModel.Properties properties = armConvergedInfrastructureModel.getProperties();
+            tags = properties.getTags();
+            if (properties.getCiState() != null) {
+                String ciState = properties.getCiState();
                 switch (ciState.toLowerCase()) {
                     case "accepted":
                         state = ConvergedInfrastructureState.ACCEPTED;
@@ -258,9 +261,28 @@ public class AzureArmConvergedInfrastructureSupport extends AbstractConvergedInf
                 }
             }
 
+            if (state.equals(ConvergedInfrastructureState.FAILED)) {
+                //get error related info and add as a tag
+                if (properties.getDeploymentError() != null) {
+                    ArmConvergedInfrastructureResponseModel.Properties.DeploymentError deploymentError = properties.getDeploymentError();
+                    List<ArmConvergedInfrastructureResponseModel.Properties.DeploymentError.ErrorDetails> detailsList = deploymentError.getErrorDetails();
+                    if (detailsList!= null && !detailsList.isEmpty()) {
+                        int errorCount = 0;
+                        for (ArmConvergedInfrastructureResponseModel.Properties.DeploymentError.ErrorDetails error : detailsList) {
+                            String message = error.getMessage();
+                            errorCount++;
+                            tags.put("error"+errorCount, message);
+                        }
+                    }
+                }
+                else {
+                    getFailedOperationErrorMessages(id, tags);
+                }
+            }
+
             SimpleDateFormat fmt = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
             fmt.setCalendar(Calendar.getInstance(new SimpleTimeZone(0, "GMT")));
-            String provisioningTimestamp = armConvergedInfrastructureModel.getProperties().getProvisioningTimestamp();
+            String provisioningTimestamp = properties.getProvisioningTimestamp();
 
             try {
                 timestamp = fmt.parse(provisioningTimestamp).getTime();
@@ -269,8 +291,8 @@ public class AzureArmConvergedInfrastructureSupport extends AbstractConvergedInf
                 logger.warn(e);
                 timestamp = System.currentTimeMillis();
             }
-            if (armConvergedInfrastructureModel.getProperties().getDependencies() != null) {
-                List<ArmConvergedInfrastructureResponseModel.Properties.Dependency> resources = armConvergedInfrastructureModel.getProperties().getDependencies();
+            if (properties.getDependencies() != null) {
+                List<ArmConvergedInfrastructureResponseModel.Properties.Dependency> resources = properties.getDependencies();
                 for (ArmConvergedInfrastructureResponseModel.Properties.Dependency d : resources) {
                     String r = d.getOutputResourceId();
                     String[] tokens = r.split("/");
@@ -320,5 +342,33 @@ public class AzureArmConvergedInfrastructureSupport extends AbstractConvergedInf
         ci.withResources(resources);
         ci.setTags(tags);
         return ci;
+    }
+
+    private void getFailedOperationErrorMessages(String tdId, Map<String, String> tags) throws CloudException, InternalException{
+        ArmTemplateDeploymentOperationsResponseModel armTemplateDeploymentOperationsResponseModel =
+            new AzureArmRequester(this.getProvider(),
+                new AzureArmConvergedInfrastructureRequests(this.getProvider()).listTemplateDeploymentOperations(tdId).build())
+                .withJsonProcessor(ArmTemplateDeploymentOperationsResponseModel.class).execute();
+
+        for (ArmTemplateDeploymentOperationResponseModel atdom : armTemplateDeploymentOperationsResponseModel.getArmTemplateDeploymentOperationModels()) {
+            if (atdom.getProperties() != null) {
+                ArmTemplateDeploymentOperationResponseModel.Properties properties = atdom.getProperties();
+                if (properties.getProvisioningState().toLowerCase().equals("failed")) {
+                    String statusCode = properties.getStatusCode();
+                    ArmTemplateDeploymentOperationResponseModel.Properties.StatusMessage statusMessage = properties.getStatusMessage();
+                    ArmTemplateDeploymentOperationResponseModel.Properties.StatusMessage.StatusError statusError = statusMessage.getStatusError();
+                    List<ArmTemplateDeploymentOperationResponseModel.Properties.StatusMessage.StatusError.ErrorDetails> detailsList = statusError.getErrorDetails();
+                    if (detailsList!= null && !detailsList.isEmpty()) {
+                        int errorCount = 0;
+                        for (ArmTemplateDeploymentOperationResponseModel.Properties.StatusMessage.StatusError.ErrorDetails error : detailsList) {
+                            String message = error.getMessage();
+                            errorCount++;
+                            String fullError = statusCode+": "+message;
+                            tags.put("opError"+errorCount, fullError);
+                        }
+                    }
+                }
+            }
+        }
     }
 }

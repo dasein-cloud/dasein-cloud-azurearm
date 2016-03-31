@@ -37,6 +37,7 @@ public class AzureArmConvergedInfrastructureRequests {
     private static final String RESOURCE_WITH_ID = "%s/%s?api-version=2016-02-01";
     private static final String CANCEL_TEMPLATE_DEPLOYMENT = "%s/%s/cancel?api-version=2016-02-01";
     private static final String VALIDATE_TEMPLATE_DEPLOYMENT  = "%s/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Resources/deployments/%s/validate?api-version=2016-02-01";
+    private static final String LIST_TEMPLATE_DEPLOYMENT_OPERATIONS = "%s/%s/operations?api-version=2016-02-01";
 
     private AzureArm provider;
 
@@ -78,6 +79,13 @@ public class AzureArmConvergedInfrastructureRequests {
         AzureArmRequester.addCommonHeaders(this.provider, requestBuilder);
         requestBuilder.setUri(String.format(VALIDATE_TEMPLATE_DEPLOYMENT, this.provider.getContext().getCloud().getEndpoint(), this.provider.getContext().getAccountNumber(), resourceGroup, deploymentName));
         requestBuilder.setEntity(new DaseinObjectToJsonEntity<ArmConvergedInfrastructureRequestModel>(armConvergedInfrastructureModel));
+        return requestBuilder;
+    }
+
+    public RequestBuilder listTemplateDeploymentOperations(String tdId) throws CloudException {
+        RequestBuilder requestBuilder = RequestBuilder.get();
+        AzureArmRequester.addCommonHeaders(this.provider, requestBuilder);
+        requestBuilder.setUri(String.format(LIST_TEMPLATE_DEPLOYMENT_OPERATIONS, this.provider.getContext().getCloud().getEndpoint(), tdId));
         return requestBuilder;
     }
 }

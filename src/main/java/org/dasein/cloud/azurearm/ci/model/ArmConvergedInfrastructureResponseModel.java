@@ -105,6 +105,8 @@ public class ArmConvergedInfrastructureResponseModel {
         private String provisioningTimestamp;
         @JsonProperty("outputResources")
         private List<Dependency> dependencies;
+        @JsonProperty("error")
+        private DeploymentError deploymentError;
         private Map<String,String> tags;
 
         public String getMode() {
@@ -139,6 +141,14 @@ public class ArmConvergedInfrastructureResponseModel {
             this.dependencies = dependencies;
         }
 
+        public DeploymentError getDeploymentError() {
+            return deploymentError;
+        }
+
+        public void setDeploymentError(DeploymentError deploymentError) {
+            this.deploymentError = deploymentError;
+        }
+
         public Map<String, String> getTags() {
             if (tags == null) {
                 tags = new HashMap<String, String>();
@@ -161,6 +171,64 @@ public class ArmConvergedInfrastructureResponseModel {
 
             public void setOutputResourceId(String resourceId) {
                 this.resourceId = resourceId;
+            }
+        }
+
+        @JsonIgnoreProperties(ignoreUnknown = true)
+        public static class DeploymentError {
+            @JsonProperty("code")
+            private String code;
+            @JsonProperty("message")
+            private String message;
+            @JsonProperty("details")
+            private List<ErrorDetails> errorDetails;
+
+            public String getCode() {
+                return code;
+            }
+
+            public void setCode(String code) {
+                this.code = code;
+            }
+
+            public String getMessage() {
+                return message;
+            }
+
+            public void setMessage(String message) {
+                this.message = message;
+            }
+
+            public List<ErrorDetails> getErrorDetails() {
+                return errorDetails;
+            }
+
+            public void setErrorDetails(List<ErrorDetails> errorDetails) {
+                this.errorDetails = errorDetails;
+            }
+
+            @JsonIgnoreProperties(ignoreUnknown = true)
+            public static class ErrorDetails {
+                @JsonProperty("code")
+                private String code;
+                @JsonProperty("message")
+                private String message;
+
+                public String getCode() {
+                    return code;
+                }
+
+                public void setCode(String code) {
+                    this.code = code;
+                }
+
+                public String getMessage() {
+                    return message;
+                }
+
+                public void setMessage(String message) {
+                    this.message = message;
+                }
             }
         }
     }

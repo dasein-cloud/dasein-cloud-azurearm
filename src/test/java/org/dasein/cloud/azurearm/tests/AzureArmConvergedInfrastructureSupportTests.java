@@ -30,6 +30,7 @@ import org.dasein.cloud.Cloud;
 import org.dasein.cloud.CloudException;
 import org.dasein.cloud.InternalException;
 import org.dasein.cloud.ProviderContext;
+import org.dasein.cloud.ResourceNotFoundException;
 import org.dasein.cloud.ResourceType;
 import org.dasein.cloud.azurearm.AzureArm;
 import org.dasein.cloud.azurearm.AzureArmLocation;
@@ -54,6 +55,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -164,11 +166,63 @@ public class AzureArmConvergedInfrastructureSupportTests {
     }
 
     @Test
+    public void listTemplateDeployments_shouldReturnEmptyListIfInvalidResourceGroup() throws CloudException, InternalException {
+        final TestCloseableHttpClient closeableHttpClient = new TestCloseableHttpClient<>("ok");
+        new NonStrictExpectations(){
+            { httpClientBuilderMock.build();
+                result = closeableHttpClient;
+                times = 0;
+            }
+        };
+
+        Iterable<ConvergedInfrastructure> actualResult = null;
+        try {
+            AzureArmConvergedInfrastructureSupport convergedInfrastructureSupport = new AzureArmConvergedInfrastructureSupport(armProviderMock);
+            ConvergedInfrastructureFilterOptions options = ConvergedInfrastructureFilterOptions.getInstance().withResourceGroupId("random_id");
+            actualResult = convergedInfrastructureSupport.listConvergedInfrastructures(options);
+        } catch (Exception e) {}
+
+        assertFalse(closeableHttpClient.isExecuteCalled());
+        assertNotNull(actualResult);
+        List<ConvergedInfrastructure> actualResultAsList = IteratorUtils.toList(actualResult.iterator());
+        assertTrue(actualResultAsList.size() == 0);
+    }
+
+    @Test
+    public void listTemplateDeployments_shouldReturnEmptyListIfNoFilterMatch() throws CloudException, InternalException {
+        final TestCloseableHttpClient closeableHttpClient = new TestCloseableHttpClient<ArmConvergedInfrastructuresResponseModel>(getTestArmConvergedInfrastructuresModel());
+        new NonStrictExpectations(){
+            { httpClientBuilderMock.build();
+                result = closeableHttpClient;
+            }
+        };
+
+        Iterable<ConvergedInfrastructure> actualResult = null;
+        try {
+            AzureArmConvergedInfrastructureSupport convergedInfrastructureSupport = new AzureArmConvergedInfrastructureSupport(armProviderMock);
+            ConvergedInfrastructureFilterOptions options = ConvergedInfrastructureFilterOptions.getInstance("filter").withResourceGroupId(TEST_RESOURCE_GROUP+"-id");
+            actualResult = convergedInfrastructureSupport.listConvergedInfrastructures(options);
+        } catch (Exception e) {}
+
+        assertTrue(closeableHttpClient.isExecuteCalled());
+        HttpUriRequest actualHttpRequest = closeableHttpClient.getActualHttpUriRequest();
+        assertTrue(actualHttpRequest.getMethod().equalsIgnoreCase("get"));
+        assertTrue(actualHttpRequest.getURI().toString().startsWith(TEST_ENDPOINT));
+        assertTrue(actualHttpRequest.getURI().toString().contains(TEST_ACCOUNT_NO));
+        assertTrue(actualHttpRequest.getURI().toString().contains(TEST_RESOURCE_GROUP));
+        assertTrue(actualHttpRequest.getURI().toString().endsWith("providers/Microsoft.Resources/deployments?api-version=2016-02-01"));
+        assertNotNull(actualResult);
+        List<ConvergedInfrastructure> actualResultAsList = IteratorUtils.toList(actualResult.iterator());
+        assertTrue(actualResultAsList.size() == 0);
+    }
+
+    @Test
     public void getTemplateDeployment_shouldReturnCorrectTD() throws InternalException, CloudException{
         final TestCloseableHttpClient closeableHttpClient = new TestCloseableHttpClient<ArmConvergedInfrastructuresResponseModel>(getTestArmConvergedInfrastructuresModel());
         new NonStrictExpectations(){
             { httpClientBuilderMock.build();
                 result = closeableHttpClient;
+                minTimes = 1;
             }
         };
 
@@ -337,6 +391,39 @@ public class AzureArmConvergedInfrastructureSupportTests {
         assertNotNull(actualResult);
         assertTrue(actualResult.getName().equals(options.getName()));
         assertTrue(actualResult.getProviderResourcePoolId().equals(TEST_RESOURCE_GROUP + "-id"));
+    }
+
+    @Test(expected = InternalException.class)
+    public void createTemplateDeployment_shouldThrowExceptionIfOptionsIsNull() throws CloudException, InternalException{
+        AzureArmConvergedInfrastructureSupport convergedInfrastructureSupport = new AzureArmConvergedInfrastructureSupport(armProviderMock);
+        convergedInfrastructureSupport.provision(null);
+    }
+
+    @Test(expected = InternalException.class)
+    public void createTemplateDeployment_shouldThrowExceptionIfResourceGroupIdIsNull() throws CloudException, InternalException{
+        ConvergedInfrastructureProvisionOptions options = ConvergedInfrastructureProvisionOptions.getInstance(TEST_DEPLOYMENT_NAME,
+                null, "Incremental", TEST_TEMPLATE_CONTENT, TEST_PARAMETERS_CONTENT, true);
+
+        AzureArmConvergedInfrastructureSupport convergedInfrastructureSupport = new AzureArmConvergedInfrastructureSupport(armProviderMock);
+        convergedInfrastructureSupport.provision(options);
+    }
+
+    @Test(expected = ResourceNotFoundException.class)
+    public void createTemplateDeployment_shouldThrowExceptionIfResourceGroupNotValid() throws CloudException, InternalException{
+        ConvergedInfrastructureProvisionOptions options = ConvergedInfrastructureProvisionOptions.getInstance(TEST_DEPLOYMENT_NAME,
+                "myFakeId", "Incremental", TEST_TEMPLATE_CONTENT, TEST_PARAMETERS_CONTENT, true);
+
+        new NonStrictExpectations(){
+            { armLocationMock.getResourcePool(anyString);
+                result = null;
+            }
+            { httpClientBuilderMock.build();
+                times = 0;
+            }
+        };
+
+        AzureArmConvergedInfrastructureSupport convergedInfrastructureSupport = new AzureArmConvergedInfrastructureSupport(armProviderMock);
+        convergedInfrastructureSupport.provision(options);
     }
 
     @Test

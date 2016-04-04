@@ -276,8 +276,7 @@ public class AzureArmConvergedInfrastructureSupport extends AbstractConvergedInf
             if (state.equals(ConvergedInfrastructureState.FAILED)) {
                 //get error related info and add as a tag
                 if (properties.getDeploymentError() != null) {
-                    ArmConvergedInfrastructureResponseModel.Properties.DeploymentError deploymentError = properties.getDeploymentError();
-                    List<ArmConvergedInfrastructureResponseModel.Properties.DeploymentError.ErrorDetails> detailsList = deploymentError.getErrorDetails();
+                    List<ArmConvergedInfrastructureResponseModel.Properties.DeploymentError.ErrorDetails> detailsList = properties.getDeploymentError().getErrorDetails();
                     if (detailsList!= null && !detailsList.isEmpty()) {
                         int errorCount = 0;
                         for (ArmConvergedInfrastructureResponseModel.Properties.DeploymentError.ErrorDetails error : detailsList) {
@@ -367,9 +366,7 @@ public class AzureArmConvergedInfrastructureSupport extends AbstractConvergedInf
                 ArmTemplateDeploymentOperationResponseModel.Properties properties = atdom.getProperties();
                 if (properties.getProvisioningState().toLowerCase().equals("failed")) {
                     String statusCode = properties.getStatusCode();
-                    ArmTemplateDeploymentOperationResponseModel.Properties.StatusMessage statusMessage = properties.getStatusMessage();
-                    ArmTemplateDeploymentOperationResponseModel.Properties.StatusMessage.StatusError statusError = statusMessage.getStatusError();
-                    List<ArmTemplateDeploymentOperationResponseModel.Properties.StatusMessage.StatusError.ErrorDetails> detailsList = statusError.getErrorDetails();
+                    List<ArmTemplateDeploymentOperationResponseModel.Properties.StatusMessage.StatusError.ErrorDetails> detailsList = properties.getStatusMessage().getStatusError().getErrorDetails();
                     if (detailsList!= null && !detailsList.isEmpty()) {
                         int errorCount = 0;
                         for (ArmTemplateDeploymentOperationResponseModel.Properties.StatusMessage.StatusError.ErrorDetails error : detailsList) {

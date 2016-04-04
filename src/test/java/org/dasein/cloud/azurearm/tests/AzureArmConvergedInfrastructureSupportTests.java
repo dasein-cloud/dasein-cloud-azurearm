@@ -364,7 +364,6 @@ public class AzureArmConvergedInfrastructureSupportTests {
         ArmConvergedInfrastructureResponseModel.Properties.Dependency resource1 = new ArmConvergedInfrastructureResponseModel.Properties.Dependency();
         resource1.setOutputResourceId("microsoft.compute/virtualmachines/vm_001");
         dependencies.add(resource1);
-
         properties.setDependencies(dependencies);
 
         ArmConvergedInfrastructureResponseModel.Properties.DeploymentError deploymentError = new ArmConvergedInfrastructureResponseModel.Properties.DeploymentError();
@@ -449,8 +448,14 @@ public class AzureArmConvergedInfrastructureSupportTests {
         ArmConvergedInfrastructureResponseModel.Properties.Dependency resource1 = new ArmConvergedInfrastructureResponseModel.Properties.Dependency();
         resource1.setOutputResourceId("microsoft.compute/virtualmachines/vm_001");
         dependencies.add(resource1);
-
         properties.setDependencies(dependencies);
+        acim1.setProperties(properties);
+
+        List<ArmConvergedInfrastructureResponseModel> armConvergedInfrastructureModelList = new ArrayList<ArmConvergedInfrastructureResponseModel>();
+        armConvergedInfrastructureModelList.add(acim1);
+
+        final ArmConvergedInfrastructuresResponseModel armConvergedInfrastructuresResponseModel = new ArmConvergedInfrastructuresResponseModel();
+        armConvergedInfrastructuresResponseModel.setArmConvergedInfrastructureModels(armConvergedInfrastructureModelList);
 
         ArmTemplateDeploymentOperationResponseModel.Properties operationProperties = new ArmTemplateDeploymentOperationResponseModel.Properties();
         ArmTemplateDeploymentOperationResponseModel.Properties.StatusMessage statusMessage = new ArmTemplateDeploymentOperationResponseModel.Properties.StatusMessage();
@@ -475,18 +480,8 @@ public class AzureArmConvergedInfrastructureSupportTests {
         final ArmTemplateDeploymentOperationsResponseModel armTemplateDeploymentOperationsResponseModel = new ArmTemplateDeploymentOperationsResponseModel();
         armTemplateDeploymentOperationsResponseModel.setArmTemplateDeploymentOperationModels(armTemplateDeploymentOperationModelList);
 
-        final TestCloseableHttpClient closeableHttpClient2 = new TestCloseableHttpClient<ArmTemplateDeploymentOperationsResponseModel>(armTemplateDeploymentOperationsResponseModel);
-
-
-        acim1.setProperties(properties);
-
-        List<ArmConvergedInfrastructureResponseModel> armConvergedInfrastructureModelList = new ArrayList<ArmConvergedInfrastructureResponseModel>();
-        armConvergedInfrastructureModelList.add(acim1);
-
-        final ArmConvergedInfrastructuresResponseModel armConvergedInfrastructuresResponseModel = new ArmConvergedInfrastructuresResponseModel();
-        armConvergedInfrastructuresResponseModel.setArmConvergedInfrastructureModels(armConvergedInfrastructureModelList);
-
         final TestCloseableHttpClient closeableHttpClient = new TestCloseableHttpClient<ArmConvergedInfrastructuresResponseModel>(armConvergedInfrastructuresResponseModel);
+        final TestCloseableHttpClient closeableHttpClient2 = new TestCloseableHttpClient<ArmTemplateDeploymentOperationsResponseModel>(armTemplateDeploymentOperationsResponseModel);
         new NonStrictExpectations(){
             { httpClientBuilderMock.build();
                 result = closeableHttpClient;

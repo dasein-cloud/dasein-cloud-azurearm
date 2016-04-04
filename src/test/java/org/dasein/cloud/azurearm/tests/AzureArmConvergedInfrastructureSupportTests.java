@@ -38,6 +38,8 @@ import org.dasein.cloud.azurearm.AzureArmRequester;
 import org.dasein.cloud.azurearm.ci.AzureArmConvergedInfrastructureSupport;
 import org.dasein.cloud.azurearm.ci.model.ArmConvergedInfrastructureResponseModel;
 import org.dasein.cloud.azurearm.ci.model.ArmConvergedInfrastructuresResponseModel;
+import org.dasein.cloud.azurearm.ci.model.ArmTemplateDeploymentOperationResponseModel;
+import org.dasein.cloud.azurearm.ci.model.ArmTemplateDeploymentOperationsResponseModel;
 import org.dasein.cloud.ci.ConvergedInfrastructure;
 import org.dasein.cloud.ci.ConvergedInfrastructureFilterOptions;
 import org.dasein.cloud.ci.ConvergedInfrastructureProvisionOptions;
@@ -53,11 +55,10 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.List;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 /**
  * User: daniellemayne
@@ -113,8 +114,14 @@ public class AzureArmConvergedInfrastructureSupportTests {
         rp.setName(TEST_RESOURCE_GROUP);
         rp.setDataCenterId(TEST_REGION + "-dc");
 
+        ResourcePool rp2 = new ResourcePool();
+        rp2.setProvideResourcePoolId(TEST_RESOURCE_GROUP + "2-id");
+        rp2.setName(TEST_RESOURCE_GROUP+"2");
+        rp2.setDataCenterId(TEST_REGION + "-dc");
+
         final List<ResourcePool> rpList = new ArrayList<ResourcePool>();
         rpList.add(rp);
+        rpList.add(rp2);
         return rpList;
     }
 
@@ -143,6 +150,7 @@ public class AzureArmConvergedInfrastructureSupportTests {
         new NonStrictExpectations(){
             { httpClientBuilderMock.build();
                 result = closeableHttpClient;
+                times = 1;
             }
         };
 
@@ -163,6 +171,29 @@ public class AzureArmConvergedInfrastructureSupportTests {
         assertNotNull(actualResult);
         List<ConvergedInfrastructure> actualResultAsList = IteratorUtils.toList(actualResult.iterator());
         assertTrue(actualResultAsList.size() == 2);
+    }
+
+    @Test
+    public void listTemplateDeployments_shouldReturnEmptyListIfNoResourceGroupsFound() throws CloudException, InternalException {
+        final TestCloseableHttpClient closeableHttpClient = new TestCloseableHttpClient<>("ok");
+        new NonStrictExpectations(){
+            { httpClientBuilderMock.build();
+                result = closeableHttpClient;
+                times = 0;
+            }
+            {   armLocationMock.listResourcePools(anyString); result = Collections.EMPTY_LIST; }
+        };
+
+        Iterable<ConvergedInfrastructure> actualResult = null;
+        try {
+            AzureArmConvergedInfrastructureSupport convergedInfrastructureSupport = new AzureArmConvergedInfrastructureSupport(armProviderMock);
+            actualResult = convergedInfrastructureSupport.listConvergedInfrastructures(null);
+        } catch (Exception e) {}
+
+        assertFalse(closeableHttpClient.isExecuteCalled());
+        assertNotNull(actualResult);
+        List<ConvergedInfrastructure> actualResultAsList = IteratorUtils.toList(actualResult.iterator());
+        assertTrue(actualResultAsList.size() == 0);
     }
 
     @Test
@@ -194,6 +225,7 @@ public class AzureArmConvergedInfrastructureSupportTests {
         new NonStrictExpectations(){
             { httpClientBuilderMock.build();
                 result = closeableHttpClient;
+                times = 1;
             }
         };
 
@@ -222,7 +254,7 @@ public class AzureArmConvergedInfrastructureSupportTests {
         new NonStrictExpectations(){
             { httpClientBuilderMock.build();
                 result = closeableHttpClient;
-                minTimes = 1;
+                times = 2;  // 2 available resource groups to search
             }
         };
 
@@ -274,6 +306,7 @@ public class AzureArmConvergedInfrastructureSupportTests {
         new NonStrictExpectations(){
             { httpClientBuilderMock.build();
                 result = closeableHttpClient;
+                times = 2;
             }
         };
 
@@ -312,6 +345,195 @@ public class AzureArmConvergedInfrastructureSupportTests {
         ConvergedInfrastructureResource resource = resources.iterator().next();
         assertTrue(resource.getResourceId().equals("vm_001"));
         assertTrue(resource.getResourceType().equals(ResourceType.VIRTUAL_MACHINE));
+    }
+
+    @Test
+    public void convergedInfrastructureFrom_shouldHandleTemplateDeploymentsInErrorState() throws CloudException, InternalException{
+        ArmConvergedInfrastructureResponseModel acim1 = new ArmConvergedInfrastructureResponseModel();
+        acim1.setId("acim1");
+        acim1.setName("deployment1");
+        acim1.setProviderResourceGroupId(TEST_RESOURCE_GROUP+"-id");
+        acim1.setProviderRegionId(TEST_REGION);
+        acim1.setProviderDatacenterId(TEST_REGION+"-dc");
+
+        ArmConvergedInfrastructureResponseModel.Properties properties = new ArmConvergedInfrastructureResponseModel.Properties();
+        properties.setCiState("Failed");
+        properties.setProvisioningTimestamp("2015-01-01T18:26:20.6229141Z");
+
+        List<ArmConvergedInfrastructureResponseModel.Properties.Dependency> dependencies = new ArrayList<ArmConvergedInfrastructureResponseModel.Properties.Dependency>();
+        ArmConvergedInfrastructureResponseModel.Properties.Dependency resource1 = new ArmConvergedInfrastructureResponseModel.Properties.Dependency();
+        resource1.setOutputResourceId("microsoft.compute/virtualmachines/vm_001");
+        dependencies.add(resource1);
+
+        properties.setDependencies(dependencies);
+
+        ArmConvergedInfrastructureResponseModel.Properties.DeploymentError deploymentError = new ArmConvergedInfrastructureResponseModel.Properties.DeploymentError();
+        ArmConvergedInfrastructureResponseModel.Properties.DeploymentError.ErrorDetails errorDetails = new ArmConvergedInfrastructureResponseModel.Properties.DeploymentError.ErrorDetails();
+        errorDetails.setCode("Conflict Error");
+        errorDetails.setMessage("Unable to create due to conflict");
+        List<ArmConvergedInfrastructureResponseModel.Properties.DeploymentError.ErrorDetails> errorList = new ArrayList<ArmConvergedInfrastructureResponseModel.Properties.DeploymentError.ErrorDetails>();
+        errorList.add(errorDetails);
+        deploymentError.setErrorDetails(errorList);
+        properties.setDeploymentError(deploymentError);
+
+        acim1.setProperties(properties);
+
+        List<ArmConvergedInfrastructureResponseModel> armConvergedInfrastructureModelList = new ArrayList<ArmConvergedInfrastructureResponseModel>();
+        armConvergedInfrastructureModelList.add(acim1);
+
+        final ArmConvergedInfrastructuresResponseModel armConvergedInfrastructuresResponseModel = new ArmConvergedInfrastructuresResponseModel();
+        armConvergedInfrastructuresResponseModel.setArmConvergedInfrastructureModels(armConvergedInfrastructureModelList);
+
+        final TestCloseableHttpClient closeableHttpClient = new TestCloseableHttpClient<ArmConvergedInfrastructuresResponseModel>(armConvergedInfrastructuresResponseModel);
+        new NonStrictExpectations(){
+            { httpClientBuilderMock.build();
+                result = closeableHttpClient;
+                times = 2;
+            }
+        };
+
+        ConvergedInfrastructure actualResult = null;
+        try {
+            AzureArmConvergedInfrastructureSupport convergedInfrastructureSupport = new AzureArmConvergedInfrastructureSupport(armProviderMock);
+            actualResult = convergedInfrastructureSupport.getConvergedInfrastructure("acim1");
+        } catch (Exception e) {}
+
+        assertTrue(closeableHttpClient.isExecuteCalled());
+        HttpUriRequest actualHttpRequest = closeableHttpClient.getActualHttpUriRequest();
+        assertTrue(actualHttpRequest.getMethod().equalsIgnoreCase("get"));
+        assertTrue(actualHttpRequest.getURI().toString().startsWith(TEST_ENDPOINT));
+        assertTrue(actualHttpRequest.getURI().toString().contains(TEST_ACCOUNT_NO));
+        assertTrue(actualHttpRequest.getURI().toString().contains(TEST_RESOURCE_GROUP));
+        assertTrue(actualHttpRequest.getURI().toString().endsWith("providers/Microsoft.Resources/deployments?api-version=2016-02-01"));
+        assertNotNull(actualResult);
+        assertTrue(actualResult.getName().equals("deployment1"));
+        assertTrue(actualResult.getProviderResourcePoolId().equals(TEST_RESOURCE_GROUP + "-id"));
+        assertTrue(actualResult.getProviderRegionId().equals(TEST_REGION));
+        assertTrue(actualResult.getProviderDatacenterId().equals(TEST_REGION + "-dc"));
+        assertTrue(actualResult.getCiState().equals(ConvergedInfrastructureState.FAILED));
+
+        String testTimestamp = "2015-01-01T18:26:20.6229141Z";
+        Calendar calendar = Calendar.getInstance();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+        try {
+            calendar.setTime(sdf.parse(testTimestamp));
+        }
+        catch ( ParseException ignore ) {}
+        assertTrue(actualResult.getProvisioningTimestamp() == calendar.getTimeInMillis());
+
+        assertNotNull(actualResult.getResources());
+        List<ConvergedInfrastructureResource> resources = actualResult.getResources();
+        assertTrue(resources.size() == 1);
+        ConvergedInfrastructureResource resource = resources.iterator().next();
+        assertTrue(resource.getResourceId().equals("vm_001"));
+        assertTrue(resource.getResourceType().equals(ResourceType.VIRTUAL_MACHINE));
+        assertNotNull(actualResult.getTags());
+        assertNotNull(actualResult.getTag("error1"));
+        assertTrue(actualResult.getTag("error1").equals("Unable to create due to conflict"));
+    }
+
+    @Test
+    public void convergedInfrastructureFrom_shouldHandleTemplateDeploymentOperationsInErrorState() throws CloudException, InternalException{
+        ArmConvergedInfrastructureResponseModel acim1 = new ArmConvergedInfrastructureResponseModel();
+        acim1.setId("acim1");
+        acim1.setName("deployment1");
+        acim1.setProviderResourceGroupId(TEST_RESOURCE_GROUP+"-id");
+        acim1.setProviderRegionId(TEST_REGION);
+        acim1.setProviderDatacenterId(TEST_REGION+"-dc");
+
+        ArmConvergedInfrastructureResponseModel.Properties properties = new ArmConvergedInfrastructureResponseModel.Properties();
+        properties.setCiState("Failed");
+        properties.setProvisioningTimestamp("2015-01-02T18:26:20.6229141Z");
+
+        List<ArmConvergedInfrastructureResponseModel.Properties.Dependency> dependencies = new ArrayList<ArmConvergedInfrastructureResponseModel.Properties.Dependency>();
+        ArmConvergedInfrastructureResponseModel.Properties.Dependency resource1 = new ArmConvergedInfrastructureResponseModel.Properties.Dependency();
+        resource1.setOutputResourceId("microsoft.compute/virtualmachines/vm_001");
+        dependencies.add(resource1);
+
+        properties.setDependencies(dependencies);
+
+        ArmTemplateDeploymentOperationResponseModel.Properties operationProperties = new ArmTemplateDeploymentOperationResponseModel.Properties();
+        ArmTemplateDeploymentOperationResponseModel.Properties.StatusMessage statusMessage = new ArmTemplateDeploymentOperationResponseModel.Properties.StatusMessage();
+        ArmTemplateDeploymentOperationResponseModel.Properties.StatusMessage.StatusError statusError = new ArmTemplateDeploymentOperationResponseModel.Properties.StatusMessage.StatusError();
+        ArmTemplateDeploymentOperationResponseModel.Properties.StatusMessage.StatusError.ErrorDetails errorDetails = new ArmTemplateDeploymentOperationResponseModel.Properties.StatusMessage.StatusError.ErrorDetails();
+        errorDetails.setCode("Conflict Error");
+        errorDetails.setMessage("Unable to create due to conflict");
+        List<ArmTemplateDeploymentOperationResponseModel.Properties.StatusMessage.StatusError.ErrorDetails> errorList = new ArrayList<ArmTemplateDeploymentOperationResponseModel.Properties.StatusMessage.StatusError.ErrorDetails>();
+        errorList.add(errorDetails);
+        statusError.setErrorDetails(errorList);
+        statusMessage.setStatusError(statusError);
+        operationProperties.setStatusMessage(statusMessage);
+        operationProperties.setStatusCode("Conflict");
+        operationProperties.setProvisioningState("Failed");
+
+        ArmTemplateDeploymentOperationResponseModel atdom1 = new ArmTemplateDeploymentOperationResponseModel();
+        atdom1.setProperties(operationProperties);
+
+        List<ArmTemplateDeploymentOperationResponseModel> armTemplateDeploymentOperationModelList = new ArrayList<ArmTemplateDeploymentOperationResponseModel>();
+        armTemplateDeploymentOperationModelList.add(atdom1);
+
+        final ArmTemplateDeploymentOperationsResponseModel armTemplateDeploymentOperationsResponseModel = new ArmTemplateDeploymentOperationsResponseModel();
+        armTemplateDeploymentOperationsResponseModel.setArmTemplateDeploymentOperationModels(armTemplateDeploymentOperationModelList);
+
+        final TestCloseableHttpClient closeableHttpClient2 = new TestCloseableHttpClient<ArmTemplateDeploymentOperationsResponseModel>(armTemplateDeploymentOperationsResponseModel);
+
+
+        acim1.setProperties(properties);
+
+        List<ArmConvergedInfrastructureResponseModel> armConvergedInfrastructureModelList = new ArrayList<ArmConvergedInfrastructureResponseModel>();
+        armConvergedInfrastructureModelList.add(acim1);
+
+        final ArmConvergedInfrastructuresResponseModel armConvergedInfrastructuresResponseModel = new ArmConvergedInfrastructuresResponseModel();
+        armConvergedInfrastructuresResponseModel.setArmConvergedInfrastructureModels(armConvergedInfrastructureModelList);
+
+        final TestCloseableHttpClient closeableHttpClient = new TestCloseableHttpClient<ArmConvergedInfrastructuresResponseModel>(armConvergedInfrastructuresResponseModel);
+        new NonStrictExpectations(){
+            { httpClientBuilderMock.build();
+                result = closeableHttpClient;
+                result = closeableHttpClient2;
+                result = closeableHttpClient;
+                result = closeableHttpClient2;
+            }
+        };
+
+        ConvergedInfrastructure actualResult = null;
+        try {
+            AzureArmConvergedInfrastructureSupport convergedInfrastructureSupport = new AzureArmConvergedInfrastructureSupport(armProviderMock);
+            actualResult = convergedInfrastructureSupport.getConvergedInfrastructure("acim1");
+        } catch (Exception e) {}
+
+        assertTrue(closeableHttpClient.isExecuteCalled());
+        HttpUriRequest actualHttpRequest = closeableHttpClient.getActualHttpUriRequest();
+        assertTrue(actualHttpRequest.getMethod().equalsIgnoreCase("get"));
+        assertTrue(actualHttpRequest.getURI().toString().startsWith(TEST_ENDPOINT));
+        assertTrue(actualHttpRequest.getURI().toString().contains(TEST_ACCOUNT_NO));
+        assertTrue(actualHttpRequest.getURI().toString().contains(TEST_RESOURCE_GROUP));
+        assertTrue(actualHttpRequest.getURI().toString().endsWith("providers/Microsoft.Resources/deployments?api-version=2016-02-01"));
+        assertNotNull(actualResult);
+        assertTrue(actualResult.getName().equals("deployment1"));
+        assertTrue(actualResult.getProviderResourcePoolId().equals(TEST_RESOURCE_GROUP + "-id"));
+        assertTrue(actualResult.getProviderRegionId().equals(TEST_REGION));
+        assertTrue(actualResult.getProviderDatacenterId().equals(TEST_REGION + "-dc"));
+        assertTrue(actualResult.getCiState().equals(ConvergedInfrastructureState.FAILED));
+
+        String testTimestamp = "2015-01-02T18:26:20.6229141Z";
+        Calendar calendar = Calendar.getInstance();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+        try {
+            calendar.setTime(sdf.parse(testTimestamp));
+        }
+        catch ( ParseException ignore ) {}
+        assertTrue(actualResult.getProvisioningTimestamp() == calendar.getTimeInMillis());
+
+        assertNotNull(actualResult.getResources());
+        List<ConvergedInfrastructureResource> resources = actualResult.getResources();
+        assertTrue(resources.size() == 1);
+        ConvergedInfrastructureResource resource = resources.iterator().next();
+        assertTrue(resource.getResourceId().equals("vm_001"));
+        assertTrue(resource.getResourceType().equals(ResourceType.VIRTUAL_MACHINE));
+        assertNotNull(actualResult.getTags());
+        assertNotNull(actualResult.getTag("opError1"));
+        assertTrue(actualResult.getTag("opError1").equals("Conflict: Unable to create due to conflict"));
     }
 
     @Test
@@ -464,5 +686,38 @@ public class AzureArmConvergedInfrastructureSupportTests {
         assertNotNull(actualResult);
         assertTrue(actualResult.getName().equals(options.getName()));
         assertTrue(actualResult.getProviderResourcePoolId().equals(TEST_RESOURCE_GROUP + "-id"));
+    }
+
+    @Test(expected = InternalException.class)
+    public void validateTemplateDeployment_shouldThrowExceptionIfOptionsIsNull() throws CloudException, InternalException{
+        AzureArmConvergedInfrastructureSupport convergedInfrastructureSupport = new AzureArmConvergedInfrastructureSupport(armProviderMock);
+        convergedInfrastructureSupport.validateDeployment(null);
+    }
+
+    @Test(expected = InternalException.class)
+    public void validateTemplateDeployment_shouldThrowExceptionIfResourceGroupIdIsNull() throws CloudException, InternalException{
+        ConvergedInfrastructureProvisionOptions options = ConvergedInfrastructureProvisionOptions.getInstance(TEST_DEPLOYMENT_NAME,
+                null, "Incremental", TEST_TEMPLATE_CONTENT, TEST_PARAMETERS_CONTENT, true);
+
+        AzureArmConvergedInfrastructureSupport convergedInfrastructureSupport = new AzureArmConvergedInfrastructureSupport(armProviderMock);
+        convergedInfrastructureSupport.validateDeployment(options);
+    }
+
+    @Test(expected = ResourceNotFoundException.class)
+    public void validateTemplateDeployment_shouldThrowExceptionIfResourceGroupNotValid() throws CloudException, InternalException{
+        ConvergedInfrastructureProvisionOptions options = ConvergedInfrastructureProvisionOptions.getInstance(TEST_DEPLOYMENT_NAME,
+                "myFakeId", "Incremental", TEST_TEMPLATE_CONTENT, TEST_PARAMETERS_CONTENT, true);
+
+        new NonStrictExpectations(){
+            { armLocationMock.getResourcePool(anyString);
+                result = null;
+            }
+            { httpClientBuilderMock.build();
+                times = 0;
+            }
+        };
+
+        AzureArmConvergedInfrastructureSupport convergedInfrastructureSupport = new AzureArmConvergedInfrastructureSupport(armProviderMock);
+        convergedInfrastructureSupport.validateDeployment(options);
     }
 }

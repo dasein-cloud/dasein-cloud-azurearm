@@ -53,9 +53,9 @@ public class ArmConvergedInfrastructureRequestModel {
         @JsonRawValue
         private String parameters;
         @JsonProperty("templateLink")
-        private String templateLink;
+        private FileLink templateLink;
         @JsonProperty("parametersLink")
-        private String parametersLink;
+        private FileLink parametersLink;
 
         public String getTemplate() {
             return template;
@@ -81,20 +81,43 @@ public class ArmConvergedInfrastructureRequestModel {
             this.parameters = parameters;
         }
 
-        public String getTemplateLink() {
+        public FileLink getTemplateLink() {
             return templateLink;
         }
 
-        public void setTemplateLink(String templateLink) {
+        public void setTemplateLink(FileLink templateLink) {
             this.templateLink = templateLink;
         }
 
-        public String getParametersLink() {
+        public FileLink getParametersLink() {
             return parametersLink;
         }
 
-        public void setParametersLink(String parametersLink) {
+        public void setParametersLink(FileLink parametersLink) {
             this.parametersLink = parametersLink;
+        }
+
+        public static class FileLink {
+            @JsonProperty("uri")
+            private String uri;
+            @JsonProperty("contentVersion")
+            private String contentVersion;
+
+            public String getUri() {
+                return uri;
+            }
+
+            public void setUri(String uri) {
+                this.uri = uri;
+            }
+
+            public String getContentVersion() {
+                return contentVersion;
+            }
+
+            public void setContentVersion(String contentVersion) {
+                this.contentVersion = contentVersion;
+            }
         }
     }
 }

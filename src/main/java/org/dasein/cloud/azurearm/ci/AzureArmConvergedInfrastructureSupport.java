@@ -151,8 +151,14 @@ public class AzureArmConvergedInfrastructureSupport extends AbstractConvergedInf
             ciProperties.setParameters(options.getParameters());
         }
         else {
-            ciProperties.setTemplateLink(options.getTemplate());
-            ciProperties.setParametersLink(options.getParameters());
+            ArmConvergedInfrastructureRequestModel.Properties.FileLink templateLink = new ArmConvergedInfrastructureRequestModel.Properties.FileLink();
+            templateLink.setUri(options.getTemplate());
+            templateLink.setContentVersion("1.0.0.0");
+            ArmConvergedInfrastructureRequestModel.Properties.FileLink parametersLink = new ArmConvergedInfrastructureRequestModel.Properties.FileLink();
+            parametersLink.setUri(options.getParameters());
+            parametersLink.setContentVersion("1.0.0.0");
+            ciProperties.setTemplateLink(templateLink);
+            ciProperties.setParametersLink(parametersLink);
         }
         armConvergedInfrastructureModel.setProperties(ciProperties);
 
@@ -205,8 +211,14 @@ public class AzureArmConvergedInfrastructureSupport extends AbstractConvergedInf
             ciProperties.setParameters(options.getParameters());
         }
         else {
-            ciProperties.setTemplateLink(options.getTemplate());
-            ciProperties.setParametersLink(options.getParameters());
+            ArmConvergedInfrastructureRequestModel.Properties.FileLink templateLink = new ArmConvergedInfrastructureRequestModel.Properties.FileLink();
+            templateLink.setUri(options.getTemplate());
+            templateLink.setContentVersion("1.0.0.0");
+            ArmConvergedInfrastructureRequestModel.Properties.FileLink parametersLink = new ArmConvergedInfrastructureRequestModel.Properties.FileLink();
+            parametersLink.setUri(options.getParameters());
+            parametersLink.setContentVersion("1.0.0.0");
+            ciProperties.setTemplateLink(templateLink);
+            ciProperties.setParametersLink(parametersLink);
         }
         armConvergedInfrastructureModel.setProperties(ciProperties);
 

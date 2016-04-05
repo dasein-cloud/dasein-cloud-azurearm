@@ -77,6 +77,28 @@ public class AzureArmConvergedInfrastructureSupport extends AbstractConvergedInf
 
     @Nonnull
     @Override
+    public ConvergedInfrastructure getConvergedInfrastructure(@Nonnull String ciId) throws CloudException, InternalException {
+        ArmConvergedInfrastructureResponseModel acim =
+            new AzureArmRequester(this.getProvider(),
+                    new AzureArmConvergedInfrastructureRequests(this.getProvider()).getTemplateDeployment(ciId).build())
+                    .withJsonProcessor(ArmConvergedInfrastructureResponseModel.class).execute();
+
+        String resourceGroupId = "";
+        String[] tokens = ciId.split("/providers");
+        resourceGroupId = tokens[0];
+        AzureArmLocation locationSupport = this.getProvider().getDataCenterServices();
+        ResourcePool resourceGroup = locationSupport.getResourcePool(resourceGroupId);
+
+        acim.setProviderDatacenterId(resourceGroup.getDataCenterId());
+        acim.setProviderResourceGroupId(resourceGroup.getProvideResourcePoolId());
+        acim.setProviderRegionId(resourceGroup.getDataCenterId().substring(0, resourceGroup.getDataCenterId().lastIndexOf("-")));
+        ConvergedInfrastructure ci = convergedInfrastructureFrom(acim);
+
+        return ci;
+    }
+
+    @Nonnull
+    @Override
     public Iterable<ConvergedInfrastructure> listConvergedInfrastructures(@Nullable ConvergedInfrastructureFilterOptions options) throws CloudException, InternalException {
         final ArrayList<ConvergedInfrastructure> cis = new ArrayList<ConvergedInfrastructure>();
 

@@ -127,11 +127,11 @@ public class AzureArmConvergedInfrastructureSupportTests {
 
     private ArmConvergedInfrastructuresResponseModel getTestArmConvergedInfrastructuresModel() {
         ArmConvergedInfrastructureResponseModel acim1 = new ArmConvergedInfrastructureResponseModel();
-        acim1.setId("acim1");
+        acim1.setId(TEST_RESOURCE_GROUP + "-id/providers/microsoft.resources/deployments/acim1");
         acim1.setName("deployment1");
 
         ArmConvergedInfrastructureResponseModel acim2 = new ArmConvergedInfrastructureResponseModel();
-        acim2.setId("acim2");
+        acim2.setId(TEST_RESOURCE_GROUP + "-id/providers/microsoft.resources/deployments/acim2");
         acim2.setName("deployment2");
 
         List<ArmConvergedInfrastructureResponseModel> armConvergedInfrastructureModelList = new ArrayList<ArmConvergedInfrastructureResponseModel>();
@@ -250,27 +250,30 @@ public class AzureArmConvergedInfrastructureSupportTests {
 
     @Test
     public void getTemplateDeployment_shouldReturnCorrectTD() throws InternalException, CloudException{
-        final TestCloseableHttpClient closeableHttpClient = new TestCloseableHttpClient<ArmConvergedInfrastructuresResponseModel>(getTestArmConvergedInfrastructuresModel());
+        final TestCloseableHttpClient closeableHttpClient = new TestCloseableHttpClient<ArmConvergedInfrastructureResponseModel>(getTestArmConvergedInfrastructuresModel().getArmConvergedInfrastructureModels().get(0));
         new NonStrictExpectations(){
             { httpClientBuilderMock.build();
                 result = closeableHttpClient;
-                times = 2;  // 2 available resource groups to search
+            }
+            { armLocationMock.getResourcePool(anyString);
+                result = getTestResourcePoolList().get(0);
             }
         };
 
         ConvergedInfrastructure actualResult = null;
+        String testTDId = TEST_RESOURCE_GROUP + "-id/providers/microsoft.resources/deployments/acim1";
         try {
             AzureArmConvergedInfrastructureSupport convergedInfrastructureSupport = new AzureArmConvergedInfrastructureSupport(armProviderMock);
-            actualResult = convergedInfrastructureSupport.getConvergedInfrastructure("acim1");
+            actualResult = convergedInfrastructureSupport.getConvergedInfrastructure(testTDId);
         } catch (Exception e) {}
 
+        String expectedGetUri = String.format("%s?api-version=2016-02-01", testTDId);
         assertTrue(closeableHttpClient.isExecuteCalled());
         HttpUriRequest actualHttpRequest = closeableHttpClient.getActualHttpUriRequest();
         assertTrue(actualHttpRequest.getMethod().equalsIgnoreCase("get"));
         assertTrue(actualHttpRequest.getURI().toString().startsWith(TEST_ENDPOINT));
-        assertTrue(actualHttpRequest.getURI().toString().contains(TEST_ACCOUNT_NO));
         assertTrue(actualHttpRequest.getURI().toString().contains(TEST_RESOURCE_GROUP));
-        assertTrue(actualHttpRequest.getURI().toString().endsWith("providers/Microsoft.Resources/deployments?api-version=2016-02-01"));
+        assertTrue(actualHttpRequest.getURI().toString().endsWith(expectedGetUri));
         assertNotNull(actualResult);
         assertTrue(actualResult.getName().equals("deployment1"));
     }
@@ -278,7 +281,7 @@ public class AzureArmConvergedInfrastructureSupportTests {
     @Test
     public void convergedInfrastructureFrom_shouldReturnObjectWithCorrectAttributes() throws CloudException, InternalException{
         ArmConvergedInfrastructureResponseModel acim1 = new ArmConvergedInfrastructureResponseModel();
-        acim1.setId("acim1");
+        acim1.setId(TEST_RESOURCE_GROUP + "-id/providers/microsoft.resources/deployments/acim1");
         acim1.setName("deployment1");
         acim1.setProviderResourceGroupId(TEST_RESOURCE_GROUP+"-id");
         acim1.setProviderRegionId(TEST_REGION);
@@ -296,33 +299,31 @@ public class AzureArmConvergedInfrastructureSupportTests {
         properties.setDependencies(dependencies);
         acim1.setProperties(properties);
 
-        List<ArmConvergedInfrastructureResponseModel> armConvergedInfrastructureModelList = new ArrayList<ArmConvergedInfrastructureResponseModel>();
-        armConvergedInfrastructureModelList.add(acim1);
-
-        final ArmConvergedInfrastructuresResponseModel armConvergedInfrastructuresResponseModel = new ArmConvergedInfrastructuresResponseModel();
-        armConvergedInfrastructuresResponseModel.setArmConvergedInfrastructureModels(armConvergedInfrastructureModelList);
-
-        final TestCloseableHttpClient closeableHttpClient = new TestCloseableHttpClient<ArmConvergedInfrastructuresResponseModel>(armConvergedInfrastructuresResponseModel);
+        final TestCloseableHttpClient closeableHttpClient = new TestCloseableHttpClient<ArmConvergedInfrastructureResponseModel>(acim1);
         new NonStrictExpectations(){
             { httpClientBuilderMock.build();
                 result = closeableHttpClient;
-                times = 2;
+                times = 1;
+            }
+            { armLocationMock.getResourcePool(anyString);
+                result = getTestResourcePoolList().get(0);
             }
         };
 
         ConvergedInfrastructure actualResult = null;
+        String testTDId = TEST_RESOURCE_GROUP + "-id/providers/microsoft.resources/deployments/acim1";
         try {
             AzureArmConvergedInfrastructureSupport convergedInfrastructureSupport = new AzureArmConvergedInfrastructureSupport(armProviderMock);
-            actualResult = convergedInfrastructureSupport.getConvergedInfrastructure("acim1");
+            actualResult = convergedInfrastructureSupport.getConvergedInfrastructure(testTDId);
         } catch (Exception e) {}
 
+        String expectedGetUri = String.format("%s?api-version=2016-02-01", testTDId);
         assertTrue(closeableHttpClient.isExecuteCalled());
         HttpUriRequest actualHttpRequest = closeableHttpClient.getActualHttpUriRequest();
         assertTrue(actualHttpRequest.getMethod().equalsIgnoreCase("get"));
         assertTrue(actualHttpRequest.getURI().toString().startsWith(TEST_ENDPOINT));
-        assertTrue(actualHttpRequest.getURI().toString().contains(TEST_ACCOUNT_NO));
         assertTrue(actualHttpRequest.getURI().toString().contains(TEST_RESOURCE_GROUP));
-        assertTrue(actualHttpRequest.getURI().toString().endsWith("providers/Microsoft.Resources/deployments?api-version=2016-02-01"));
+        assertTrue(actualHttpRequest.getURI().toString().endsWith(expectedGetUri));
         assertNotNull(actualResult);
         assertTrue(actualResult.getName().equals("deployment1"));
         assertTrue(actualResult.getProviderResourcePoolId().equals(TEST_RESOURCE_GROUP + "-id"));
@@ -350,7 +351,7 @@ public class AzureArmConvergedInfrastructureSupportTests {
     @Test
     public void convergedInfrastructureFrom_shouldHandleTemplateDeploymentsInErrorState() throws CloudException, InternalException{
         ArmConvergedInfrastructureResponseModel acim1 = new ArmConvergedInfrastructureResponseModel();
-        acim1.setId("acim1");
+        acim1.setId(TEST_RESOURCE_GROUP + "-id/providers/microsoft.resources/deployments/acim1");
         acim1.setName("deployment1");
         acim1.setProviderResourceGroupId(TEST_RESOURCE_GROUP+"-id");
         acim1.setProviderRegionId(TEST_REGION);
@@ -377,33 +378,31 @@ public class AzureArmConvergedInfrastructureSupportTests {
 
         acim1.setProperties(properties);
 
-        List<ArmConvergedInfrastructureResponseModel> armConvergedInfrastructureModelList = new ArrayList<ArmConvergedInfrastructureResponseModel>();
-        armConvergedInfrastructureModelList.add(acim1);
-
-        final ArmConvergedInfrastructuresResponseModel armConvergedInfrastructuresResponseModel = new ArmConvergedInfrastructuresResponseModel();
-        armConvergedInfrastructuresResponseModel.setArmConvergedInfrastructureModels(armConvergedInfrastructureModelList);
-
-        final TestCloseableHttpClient closeableHttpClient = new TestCloseableHttpClient<ArmConvergedInfrastructuresResponseModel>(armConvergedInfrastructuresResponseModel);
+        final TestCloseableHttpClient closeableHttpClient = new TestCloseableHttpClient<ArmConvergedInfrastructureResponseModel>(acim1);
         new NonStrictExpectations(){
             { httpClientBuilderMock.build();
                 result = closeableHttpClient;
-                times = 2;
+                times = 1;
+            }
+            { armLocationMock.getResourcePool(anyString);
+                result = getTestResourcePoolList().get(0);
             }
         };
 
         ConvergedInfrastructure actualResult = null;
+        String testTDId = TEST_RESOURCE_GROUP + "-id/providers/microsoft.resources/deployments/acim1";
         try {
             AzureArmConvergedInfrastructureSupport convergedInfrastructureSupport = new AzureArmConvergedInfrastructureSupport(armProviderMock);
-            actualResult = convergedInfrastructureSupport.getConvergedInfrastructure("acim1");
+            actualResult = convergedInfrastructureSupport.getConvergedInfrastructure(testTDId);
         } catch (Exception e) {}
 
+        String expectedGetUri = String.format("%s?api-version=2016-02-01", testTDId);
         assertTrue(closeableHttpClient.isExecuteCalled());
         HttpUriRequest actualHttpRequest = closeableHttpClient.getActualHttpUriRequest();
         assertTrue(actualHttpRequest.getMethod().equalsIgnoreCase("get"));
         assertTrue(actualHttpRequest.getURI().toString().startsWith(TEST_ENDPOINT));
-        assertTrue(actualHttpRequest.getURI().toString().contains(TEST_ACCOUNT_NO));
         assertTrue(actualHttpRequest.getURI().toString().contains(TEST_RESOURCE_GROUP));
-        assertTrue(actualHttpRequest.getURI().toString().endsWith("providers/Microsoft.Resources/deployments?api-version=2016-02-01"));
+        assertTrue(actualHttpRequest.getURI().toString().endsWith(expectedGetUri));
         assertNotNull(actualResult);
         assertTrue(actualResult.getName().equals("deployment1"));
         assertTrue(actualResult.getProviderResourcePoolId().equals(TEST_RESOURCE_GROUP + "-id"));
@@ -434,7 +433,7 @@ public class AzureArmConvergedInfrastructureSupportTests {
     @Test
     public void convergedInfrastructureFrom_shouldHandleTemplateDeploymentOperationsInErrorState() throws CloudException, InternalException{
         ArmConvergedInfrastructureResponseModel acim1 = new ArmConvergedInfrastructureResponseModel();
-        acim1.setId("acim1");
+        acim1.setId(TEST_RESOURCE_GROUP + "-id/providers/microsoft.resources/deployments/acim1");
         acim1.setName("deployment1");
         acim1.setProviderResourceGroupId(TEST_RESOURCE_GROUP+"-id");
         acim1.setProviderRegionId(TEST_REGION);
@@ -450,12 +449,6 @@ public class AzureArmConvergedInfrastructureSupportTests {
         dependencies.add(resource1);
         properties.setDependencies(dependencies);
         acim1.setProperties(properties);
-
-        List<ArmConvergedInfrastructureResponseModel> armConvergedInfrastructureModelList = new ArrayList<ArmConvergedInfrastructureResponseModel>();
-        armConvergedInfrastructureModelList.add(acim1);
-
-        final ArmConvergedInfrastructuresResponseModel armConvergedInfrastructuresResponseModel = new ArmConvergedInfrastructuresResponseModel();
-        armConvergedInfrastructuresResponseModel.setArmConvergedInfrastructureModels(armConvergedInfrastructureModelList);
 
         ArmTemplateDeploymentOperationResponseModel.Properties operationProperties = new ArmTemplateDeploymentOperationResponseModel.Properties();
         ArmTemplateDeploymentOperationResponseModel.Properties.StatusMessage statusMessage = new ArmTemplateDeploymentOperationResponseModel.Properties.StatusMessage();
@@ -480,30 +473,32 @@ public class AzureArmConvergedInfrastructureSupportTests {
         final ArmTemplateDeploymentOperationsResponseModel armTemplateDeploymentOperationsResponseModel = new ArmTemplateDeploymentOperationsResponseModel();
         armTemplateDeploymentOperationsResponseModel.setArmTemplateDeploymentOperationModels(armTemplateDeploymentOperationModelList);
 
-        final TestCloseableHttpClient closeableHttpClient = new TestCloseableHttpClient<ArmConvergedInfrastructuresResponseModel>(armConvergedInfrastructuresResponseModel);
+        final TestCloseableHttpClient closeableHttpClient = new TestCloseableHttpClient<ArmConvergedInfrastructureResponseModel>(acim1);
         final TestCloseableHttpClient closeableHttpClient2 = new TestCloseableHttpClient<ArmTemplateDeploymentOperationsResponseModel>(armTemplateDeploymentOperationsResponseModel);
         new NonStrictExpectations(){
             { httpClientBuilderMock.build();
                 result = closeableHttpClient;
                 result = closeableHttpClient2;
-                result = closeableHttpClient;
-                result = closeableHttpClient2;
+            }
+            { armLocationMock.getResourcePool(anyString);
+                result = getTestResourcePoolList().get(0);
             }
         };
 
         ConvergedInfrastructure actualResult = null;
+        String testTDId = TEST_RESOURCE_GROUP + "-id/providers/microsoft.resources/deployments/acim1";
         try {
             AzureArmConvergedInfrastructureSupport convergedInfrastructureSupport = new AzureArmConvergedInfrastructureSupport(armProviderMock);
-            actualResult = convergedInfrastructureSupport.getConvergedInfrastructure("acim1");
+            actualResult = convergedInfrastructureSupport.getConvergedInfrastructure(testTDId);
         } catch (Exception e) {}
 
+        String expectedGetUri = String.format("%s?api-version=2016-02-01", testTDId);
         assertTrue(closeableHttpClient.isExecuteCalled());
         HttpUriRequest actualHttpRequest = closeableHttpClient.getActualHttpUriRequest();
         assertTrue(actualHttpRequest.getMethod().equalsIgnoreCase("get"));
         assertTrue(actualHttpRequest.getURI().toString().startsWith(TEST_ENDPOINT));
-        assertTrue(actualHttpRequest.getURI().toString().contains(TEST_ACCOUNT_NO));
         assertTrue(actualHttpRequest.getURI().toString().contains(TEST_RESOURCE_GROUP));
-        assertTrue(actualHttpRequest.getURI().toString().endsWith("providers/Microsoft.Resources/deployments?api-version=2016-02-01"));
+        assertTrue(actualHttpRequest.getURI().toString().endsWith(expectedGetUri));
         assertNotNull(actualResult);
         assertTrue(actualResult.getName().equals("deployment1"));
         assertTrue(actualResult.getProviderResourcePoolId().equals(TEST_RESOURCE_GROUP + "-id"));

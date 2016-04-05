@@ -45,6 +45,13 @@ public class AzureArmConvergedInfrastructureRequests {
         this.provider = provider;
     }
 
+    public RequestBuilder getTemplateDeployment(String tdId) throws CloudException {
+        RequestBuilder requestBuilder = RequestBuilder.get();
+        AzureArmRequester.addCommonHeaders(this.provider, requestBuilder);
+        requestBuilder.setUri(String.format(RESOURCE_WITH_ID, this.provider.getContext().getCloud().getEndpoint(), tdId));
+        return requestBuilder;
+    }
+
     public RequestBuilder listTemplateDeployments(String resourceGroup) throws CloudException {
         RequestBuilder requestBuilder = RequestBuilder.get();
         AzureArmRequester.addCommonHeaders(this.provider, requestBuilder);

@@ -78,6 +78,7 @@ public class AzureArmConvergedInfrastructureRequests {
         RequestBuilder requestBuilder = RequestBuilder.post();
         AzureArmRequester.addCommonHeaders(this.provider, requestBuilder);
         requestBuilder.setUri(String.format(CANCEL_TEMPLATE_DEPLOYMENT, this.provider.getContext().getCloud().getEndpoint(), tdId));
+        requestBuilder.addHeader("Content-Length", "0");
         return requestBuilder;
     }
 

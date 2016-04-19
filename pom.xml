@@ -56,14 +56,14 @@
         <dependency>
             <groupId>org.dasein</groupId>
             <artifactId>dasein-cloud-core</artifactId>
-            <version>1.0.0</version>
+            <version>0.9.5-SNAPSHOT</version>
             <scope>compile</scope>
             <optional>false</optional>
         </dependency>
         <dependency>
             <groupId>dasein-cloud</groupId>
             <artifactId>dasein-cloud-utils</artifactId>
-            <version>1.0.0</version>
+            <version>1.0.1</version>
             <scope>compile</scope>
             <optional>false</optional>
         </dependency>
@@ -122,9 +122,10 @@
         </dependency>
 
         <dependency>
-            <groupId>mockit</groupId>
+            <groupId>org.jmockit</groupId>
             <artifactId>jmockit</artifactId>
-            <version>0.999.4</version>
+            <version>1.19</version>
+            <scope>test</scope>
         </dependency>
 
         <!-- Test -->
@@ -137,7 +138,7 @@
         <dependency>
             <groupId>org.dasein</groupId>
             <artifactId>dasein-cloud-test</artifactId>
-            <version>1.0.0</version>
+            <version>1.0.1-SNAPSHOT</version>
             <scope>test</scope>
             <optional>false</optional>
         </dependency>
@@ -229,6 +230,9 @@
                     <excludes>
                         <exclude>**/TestSuite.class</exclude>
                     </excludes>
+                    <includes>
+                        <include>**/tests/*.class</include>
+                    </includes>
                 </configuration>
             </plugin>
 

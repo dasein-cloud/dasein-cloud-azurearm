@@ -52,7 +52,7 @@ public class AzureArmLocationCapabilities extends AbstractCapabilities<AzureArm>
 
     @Override
     public boolean supportsResourcePools() {
-        return false;
+        return true;
     }
 
     /**

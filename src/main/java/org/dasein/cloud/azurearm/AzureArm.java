@@ -25,9 +25,11 @@ import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.dasein.cloud.AbstractCloud;
 import org.dasein.cloud.CloudException;
 import org.dasein.cloud.ContextRequirements;
+import org.dasein.cloud.GeneralCloudException;
+import org.dasein.cloud.azurearm.ci.AzureArmConvergedInfrastructureService;
 import org.dasein.cloud.azurearm.compute.AzureArmComputeService;
 import org.dasein.cloud.azurearm.network.AzureArmNetworkServices;
-import org.dasein.cloud.dc.DataCenterServices;
+import org.dasein.cloud.ci.ConvergedInfrastructureServices;
 import org.dasein.cloud.network.NetworkServices;
 
 import javax.annotation.Nonnull;
@@ -54,7 +56,7 @@ public class AzureArm extends AbstractCloud {
             builder.setConnectionManager(ccm);
             return builder;
         } catch (Exception e) {
-            throw new CloudException(e.getMessage());
+            throw new GeneralCloudException(e.getMessage());
         }
     }
 
@@ -68,7 +70,7 @@ public class AzureArm extends AbstractCloud {
             builder.setConnectionManager(connManager);
             return builder;
         } catch (Exception e) {
-            throw new CloudException(e.getMessage());
+            throw new GeneralCloudException(e.getMessage());
         }
     }
 
@@ -89,11 +91,17 @@ public class AzureArm extends AbstractCloud {
         );
     }
 
+    @Nullable
+    @Override
+    public ConvergedInfrastructureServices getConvergedInfrastructureServices() {
+        return new AzureArmConvergedInfrastructureService(this);
+    }
+
     @Override
     public @Nonnull AzureArmComputeService getComputeServices() { return new AzureArmComputeService(this); }
 
     @Override
-    public @Nonnull DataCenterServices getDataCenterServices() {
+    public @Nonnull AzureArmLocation getDataCenterServices() {
         return new AzureArmLocation(this);
     }
 

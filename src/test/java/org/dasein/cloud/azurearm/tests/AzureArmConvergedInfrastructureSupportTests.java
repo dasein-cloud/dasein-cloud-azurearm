@@ -568,7 +568,7 @@ public class AzureArmConvergedInfrastructureSupportTests {
     @Test
     public void createTemplateDeployment_shouldDoAPutToCreateTDWithJsonEntity() throws CloudException, InternalException{
         ConvergedInfrastructureProvisionOptions options = ConvergedInfrastructureProvisionOptions.getInstance(TEST_DEPLOYMENT_NAME,
-                TEST_RESOURCE_GROUP+"-id", "Incremental", TEST_TEMPLATE_CONTENT, TEST_PARAMETERS_CONTENT, true);
+                "description", TEST_RESOURCE_GROUP+"-id", "Incremental", TEST_TEMPLATE_CONTENT, TEST_PARAMETERS_CONTENT, true);
 
         ArmConvergedInfrastructureResponseModel acim1 = new ArmConvergedInfrastructureResponseModel();
         acim1.setId("acim1");
@@ -614,7 +614,7 @@ public class AzureArmConvergedInfrastructureSupportTests {
     @Test(expected = InternalException.class)
     public void createTemplateDeployment_shouldThrowExceptionIfResourceGroupIdIsNull() throws CloudException, InternalException{
         ConvergedInfrastructureProvisionOptions options = ConvergedInfrastructureProvisionOptions.getInstance(TEST_DEPLOYMENT_NAME,
-                null, "Incremental", TEST_TEMPLATE_CONTENT, TEST_PARAMETERS_CONTENT, true);
+                "description", null, "Incremental", TEST_TEMPLATE_CONTENT, TEST_PARAMETERS_CONTENT, true);
 
         AzureArmConvergedInfrastructureSupport convergedInfrastructureSupport = new AzureArmConvergedInfrastructureSupport(armProviderMock);
         convergedInfrastructureSupport.provision(options);
@@ -623,7 +623,7 @@ public class AzureArmConvergedInfrastructureSupportTests {
     @Test(expected = ResourceNotFoundException.class)
     public void createTemplateDeployment_shouldThrowExceptionIfResourceGroupNotValid() throws CloudException, InternalException{
         ConvergedInfrastructureProvisionOptions options = ConvergedInfrastructureProvisionOptions.getInstance(TEST_DEPLOYMENT_NAME,
-                "myFakeId", "Incremental", TEST_TEMPLATE_CONTENT, TEST_PARAMETERS_CONTENT, true);
+                "description", "myFakeId", "Incremental", TEST_TEMPLATE_CONTENT, TEST_PARAMETERS_CONTENT, true);
 
         new NonStrictExpectations(){
             { armLocationMock.getResourcePool(anyString);
@@ -641,7 +641,7 @@ public class AzureArmConvergedInfrastructureSupportTests {
     @Test
     public void validateTemplateDeployment_shouldDoAPostToValidateTDWithJsonEntity() throws CloudException, InternalException{
         ConvergedInfrastructureProvisionOptions options = ConvergedInfrastructureProvisionOptions.getInstance(TEST_DEPLOYMENT_NAME,
-                TEST_RESOURCE_GROUP+"-id", "Incremental", TEST_TEMPLATE_CONTENT, TEST_PARAMETERS_CONTENT, true);
+                "description", TEST_RESOURCE_GROUP+"-id", "Incremental", TEST_TEMPLATE_CONTENT, TEST_PARAMETERS_CONTENT, true);
 
         ArmConvergedInfrastructureResponseModel acim1 = new ArmConvergedInfrastructureResponseModel();
         acim1.setId("acim1");
@@ -687,7 +687,7 @@ public class AzureArmConvergedInfrastructureSupportTests {
     @Test(expected = InternalException.class)
     public void validateTemplateDeployment_shouldThrowExceptionIfResourceGroupIdIsNull() throws CloudException, InternalException{
         ConvergedInfrastructureProvisionOptions options = ConvergedInfrastructureProvisionOptions.getInstance(TEST_DEPLOYMENT_NAME,
-                null, "Incremental", TEST_TEMPLATE_CONTENT, TEST_PARAMETERS_CONTENT, true);
+                "description", null, "Incremental", TEST_TEMPLATE_CONTENT, TEST_PARAMETERS_CONTENT, true);
 
         AzureArmConvergedInfrastructureSupport convergedInfrastructureSupport = new AzureArmConvergedInfrastructureSupport(armProviderMock);
         convergedInfrastructureSupport.validateDeployment(options);
@@ -696,7 +696,7 @@ public class AzureArmConvergedInfrastructureSupportTests {
     @Test(expected = ResourceNotFoundException.class)
     public void validateTemplateDeployment_shouldThrowExceptionIfResourceGroupNotValid() throws CloudException, InternalException{
         ConvergedInfrastructureProvisionOptions options = ConvergedInfrastructureProvisionOptions.getInstance(TEST_DEPLOYMENT_NAME,
-                "myFakeId", "Incremental", TEST_TEMPLATE_CONTENT, TEST_PARAMETERS_CONTENT, true);
+                "description", "myFakeId", "Incremental", TEST_TEMPLATE_CONTENT, TEST_PARAMETERS_CONTENT, true);
 
         new NonStrictExpectations(){
             { armLocationMock.getResourcePool(anyString);

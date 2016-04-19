@@ -23,6 +23,7 @@ import org.dasein.cloud.AbstractCapabilities;
 import org.dasein.cloud.Requirement;
 import org.dasein.cloud.azurearm.AzureArm;
 import org.dasein.cloud.ci.ConvergedInfrastructureCapabilities;
+import org.dasein.cloud.util.NamingConstraints;
 
 import javax.annotation.Nonnull;
 
@@ -44,5 +45,16 @@ public class AzureArmConvergedInfrastructureCapabilities extends AbstractCapabil
     @Override
     public Requirement identifyTemplateContentLaunchRequirement() {
         return Requirement.OPTIONAL;
+    }
+
+    @Nonnull
+    @Override
+    public NamingConstraints getConvergedInfrastructureNamingConstraints() {
+        return NamingConstraints.getAlphaNumeric(1, 63)
+                .withRegularExpression("^[a-z][-a-z0-9]{0,61}[a-z0-9]$")
+                .lowerCaseOnly()
+                .withNoSpaces()
+                .withLastCharacterSymbolAllowed(false)
+                .constrainedBy('-');
     }
 }
